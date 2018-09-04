@@ -3,9 +3,10 @@ import re
 from slackclient import SlackClient
 
 # Read OAuth credentials from file
-f = open("AuthenticationCredentials.txt", 'r')
+f = open("auth.txt", 'r')
 lines = f.read().splitlines()
-SLACK_OAUTH = lines [1]
+SLACK_OAUTH = lines[1]
+f.close()
 
 # Instantiate Slack Client
 slack_client = SlackClient(SLACK_OAUTH)
@@ -51,7 +52,8 @@ def handle_command(command, channel):
     # Default response is help text for the user
     default_response = "I'm not sure what you mean. Try *{}*".format(EXAMPLE_COMMAND)
 
-    # Finds and executes the given in command, filling in response
+    # Finds and executes the given command, filling in response
+    command = command.lower()
     response = None
 
     if command.startswith("creator"):
@@ -69,7 +71,7 @@ def handle_command(command, channel):
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
-        print("Starter Bot connected and running!")
+        print("PyBot connected and running!")
         # Read bot's user ID by calling Web API method 'auth.test'
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while True:
