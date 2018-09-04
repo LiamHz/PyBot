@@ -1,11 +1,16 @@
 import time
 import re
+import praw
 from slackclient import SlackClient
 
-# Read OAuth credentials from file
+# Read credentials from file
 f = open("auth.txt", 'r')
 lines = f.read().splitlines()
 SLACK_OAUTH = lines[1]
+REDDIT_USERNAME = lines[4]
+REDDIT_PASSWORD = lines[5]
+REDDIT_API_USERNAME = lines[8]
+REDDIT_API_PASSWORD = lines[9]
 f.close()
 
 # Instantiate Slack Client
@@ -18,6 +23,13 @@ starterbot_id = None
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "creator"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+
+# Setup PRAW variables
+reddit = praw.Reddit(client_id=REDDIT_API_USERNAME,
+                     client_secret=REDDIT_API_PASSWORD,
+                     password=REDDIT_PASSWORD,
+                     username=REDDIT_USERNAME,
+                     user_agent='RedditDigest')
 
 def parse_bot_commands(slack_events):
     """
@@ -56,11 +68,25 @@ def handle_command(command, channel):
     command = command.lower()
     response = None
 
-    if command.startswith("creator"):
+    if "creator" in command:
         response = "I was created by Liam Hinzman"
 
-    if command.startswith("source code"):
+    if "source code" in command:
         response = "My github repo is hosted at https://github.com/LiamHz/PyBot"
+
+    if "news" in command:
+        submissions = []
+        subreddit = reddit.subreddit('WorldNews')
+        subredditLimit = 3
+
+        for submission in subreddit.top(time_filter='day', limit=subredditLimit):
+            submissions.append("*{}*: {}".format(submission.title, submission.url))
+
+        response = []
+        response.append("The top 3 stories of today on r/WorldNews are:")
+        for i in range(len(submissions)):
+            response.append(submissions[i])
+        response = "\n".join(response)
 
     # Send the response back to the channel
     slack_client.api_call(
