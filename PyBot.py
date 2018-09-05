@@ -74,6 +74,32 @@ def handle_command(command, channel):
     if "source code" in command:
         response = "My github repo is hosted at https://github.com/LiamHz/PyBot"
 
+    if "resources" in command:
+        if "programming" in command:
+            response = []
+            response.append("*Learn Python on CodeCademy*: https://www.codecademy.com/learn/learn-python")
+            response.append("*WebDev Course*: https://www.theodinproject.com/")
+            response = "\n".join(response)
+        elif ("machine learning" in command) or ("ml" in command):
+            response = []
+            response.append("Note: ML stands for Machine Learning")
+            response.append("*Google's ML Crash Course*: https://developers.google.com/machine-learning/crash-course/prereqs-and-prework")
+            response.append("*ML with Andrew Ng*: https://www.coursera.org/learn/machine-learning")
+            response.append("*TensorFlow Tutorials*: https://www.tensorflow.org/tutorials/")
+            response = "\n".join(response)
+        elif ("cryptocurrency" in command) or ("crypto" in command) or ("bitcoin" in command):
+            response = []
+            response.append("*How Cyrptocurrencies Work*: https://youtu.be/bBC-nXj3Ng4")
+            response.append("*The Original Bitcon Whitepaper*: https://www.bitcoin.com/bitcoin.pdf")
+            response = "\n".join(response)
+        elif "fitness" in command:
+            response = []
+            response.append("*Intro to Weight Lifting*: https://docs.google.com/document/d/1l3TxRVjwqNGNpa1m0V_aRuIa_ZMujhYpsmBA653IIT4/edit?usp=sharing")
+            response.append("*No Gym? Bodyweight Fitness Routine*: https://www.reddit.com/r/bodyweightfitness/wiki/kb/recommended_routine")
+            response.append("*Exercise's Benfits to Mental Health*: https://www.helpguide.org/articles/healthy-living/the-mental-health-benefits-of-exercise.htm")
+            response = "\n".join(response)
+
+    # Respond with the top 3 posts of the day from r/WorldNews
     if "news" in command:
         submissions = []
         subreddit = reddit.subreddit('WorldNews')
