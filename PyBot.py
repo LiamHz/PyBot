@@ -24,6 +24,13 @@ RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "creator"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
+# Creator's user ID
+request = slack_client.api_call("users.list")
+if request['ok']:
+    for item in request['members']:
+        if item['name'] == 'liam.hinzman':
+            creatorID = item['id']
+
 # Setup PRAW variables
 reddit = praw.Reddit(client_id=REDDIT_API_USERNAME,
                      client_secret=REDDIT_API_PASSWORD,
@@ -40,10 +47,11 @@ def parse_bot_commands(slack_events):
     for event in slack_events:
         # Filter events to only consider messages
         if event["type"] == "message" and not "subtype" in event:
+            print(event)
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
-                return message, event["channel"]
-    return None, None
+                return message, event["channel"], event["user"], event["event_ts"]
+    return None, None, None, None
 
 def parse_direct_mention(message_text):
     """
@@ -57,7 +65,7 @@ def parse_direct_mention(message_text):
     else:
         return (None, None)
 
-def handle_command(command, channel):
+def handle_command(command, channel, user, eventThread):
     """
         Execute bot command if the command is known
     """
@@ -68,13 +76,30 @@ def handle_command(command, channel):
     command = command.lower()
     response = None
 
-    if "creator" in command:
+    if ("suggestion" in command) or ("suggest" in command):
+        # Get username of suggestion sender
+        request = slack_client.api_call("users.list")
+        if request['ok']:
+            for item in request['members']:
+                if item['id'] == user:
+                    suggestion_sender = item['name']
+
+        response = "Your suggestion was sent to to Liam Hinzman!"
+        suggestion = "@{}'s suggestion for PyBot: \n {}".format(suggestion_sender, command)
+
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=creatorID,
+            text=suggestion or default_response
+        )
+
+    elif "creator" in command:
         response = "I was created by Liam Hinzman"
 
-    if "source code" in command:
+    elif ("source code" in command) or ("repo" in command):
         response = "My github repo is hosted at https://github.com/LiamHz/PyBot"
 
-    if "resources" in command:
+    elif "resources" in command:
         if "programming" in command:
             response = []
             response.append("*Learn Python on CodeCademy*: https://www.codecademy.com/learn/learn-python")
@@ -98,9 +123,11 @@ def handle_command(command, channel):
             response.append("*No Gym? Bodyweight Fitness Routine*: https://www.reddit.com/r/bodyweightfitness/wiki/kb/recommended_routine")
             response.append("*Exercise's Benfits to Mental Health*: https://www.helpguide.org/articles/healthy-living/the-mental-health-benefits-of-exercise.htm")
             response = "\n".join(response)
+        else:
+            response = "type 'resources' plus a category such as: programming / machine learning / crypto / fitness"
 
     # Respond with the top 3 posts of the day from r/WorldNews
-    if "news" in command:
+    elif "news" in command:
         submissions = []
         subreddit = reddit.subreddit('WorldNews')
         subredditLimit = 3
@@ -114,12 +141,33 @@ def handle_command(command, channel):
             response.append(submissions[i])
         response = "\n".join(response)
 
-    # Send the response back to the channel
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=channel,
-        text=response or default_response
-    )
+    elif ("commands" in command) or ("list" in command):
+        response = []
+        response.append("Here's a list of my available commands")
+        response.append("*suggest* -- Suggest a feature request to Liam (bot creator)")
+        response.append("*repo* -- Send a link to the github repo for PyBot")
+        response.append("*resources* -- Send a list of resources for a supported topic")
+        response.append("*news* -- Send the top 3 news stories of the day")
+        response = "\n".join(response)
+
+    if ("send public" in command):
+        eventThread = 'nil'
+
+    if eventThread != 'nil':
+        # Send the response back in thread
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=response or default_response,
+            thread_ts=eventThread
+        )
+    else:
+        # Send the response back to the channel
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=response or default_response,
+        )
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
@@ -127,9 +175,9 @@ if __name__ == "__main__":
         # Read bot's user ID by calling Web API method 'auth.test'
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while True:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
+            command, channel, user, eventThread = parse_bot_commands(slack_client.rtm_read())
             if command:
-                handle_command(command, channel)
+                handle_command(command, channel, user, eventThread)
             time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above")
